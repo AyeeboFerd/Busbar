@@ -1,545 +1,454 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Busbar Bend Allowance Calculator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Busbar Bend Allowance & Deduction Calculator</title>
+  <style>
+    :root{
+      --bg1: #667eea;
+      --bg2: #764ba2;
+      --card: #f8f9fa;
+      --accent: #3498db;
+      --success: #27ae60;
+      --muted: #6c757d;
+      --danger: #e74c3c;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:#222;
+      padding:20px;
+    }
+    .container{
+      max-width:1150px;
+      margin:0 auto;
+      background: rgba(255,255,255,0.98);
+      border-radius:14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+      overflow:hidden;
+    }
+    header{
+      padding:26px;
+      background: linear-gradient(135deg,#2c3e50,#34495e);
+      color:#fff;
+      text-align:center;
+    }
+    header h1{margin:0 0 6px;font-size:1.8rem}
+    header p{margin:0;font-size:0.95rem;opacity:0.95}
+    .formula {
+      margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.06);font-weight:600;
+    }
+    main{padding:26px;display:grid;grid-template-columns:1fr 420px;gap:28px}
+    @media(max-width:980px){ main{grid-template-columns:1fr} }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+    .card{background:var(--card);border-radius:12px;padding:18px;border-left:6px solid var(--accent)}
+    .card.alt{border-left-color:var(--success); background:#f0fff6}
+    .section-title{font-weight:700;margin-bottom:12px;color:#2c3e50;display:flex;align-items:center;gap:10px}
+    .input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .input-label{font-size:0.9rem;margin-bottom:6px;color:#34495e;font-weight:700}
+    input[type="number"], select{
+      width:100%;padding:10px 12px;border-radius:8px;border:2px solid #e6e6e6;font-size:1rem;background:#fff;
+    }
+    .unit{font-size:0.85rem;color:var(--muted);margin-top:6px}
+    .muted{color:var(--muted);font-size:0.9rem}
+    .btn{
+      display:inline-block;padding:10px 14px;border-radius:18px;border:none;background:linear-gradient(135deg,#f39c12,#e67e22);
+      color:#fff;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(230,126,34,0.12)
+    }
+    .result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .result{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;padding:14px;border-radius:10px;text-align:center}
+    .result.dark{background:linear-gradient(135deg,#34495e,#2c3e50)}
+    .label{font-size:0.95rem;opacity:0.95;margin-bottom:8px}
+    .val{font-size:1.4rem;font-weight:800}
+    .small{font-size:0.85rem;color:rgba(255,255,255,0.9)}
+    .note{margin-top:12px;font-size:0.95rem;color:#233}
+    .error{background:var(--danger);color:#fff;padding:8px;border-radius:6px;margin-top:10px;display:none}
+    .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
+    .help-link{background:#17a2b8;color:#fff;padding:8px 12px;border-radius:12px;border:none;cursor:pointer}
+    .sample-box{background:#fffbe6;padding:12px;border-radius:8px;border-left:5px solid #ffc107;margin-top:12px}
+    .instructions{background:#e8f4f8;border-left:5px solid #17a2b8;padding:12px;border-radius:8px;margin-top:12px;color:#0c5460}
 
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:40}
+    .modal{background:#fff;width:90%;max-width:900px;border-radius:10px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,0.25);max-height:84vh;overflow:auto}
+    .modal h3{margin-top:0}
+    .close-btn{float:right;background:#e74c3c;border:none;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer}
 
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .formula {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            padding: 40px;
-        }
-
-        .input-section {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #3498db;
-        }
-
-        .output-section {
-            background: #f0f8e7;
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #27ae60;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            margin-bottom: 25px;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .input-group {
-            margin-bottom: 25px;
-        }
-
-        .input-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #34495e;
-            font-size: 1.1rem;
-        }
-
-        .variable {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #e74c3c;
-            margin-right: 10px;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .unit {
-            color: #7f8c8d;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }
-
-        .result-display {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
-            transform: translateY(0);
-            transition: all 0.3s ease;
-        }
-
-        .result-display:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(46, 204, 113, 0.4);
-        }
-
-        .result-label {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            opacity: 0.9;
-        }
-
-        .result-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .result-unit {
-            font-size: 1.1rem;
-            opacity: 0.8;
-        }
-
-        .sample-section {
-            grid-column: 1 / -1;
-            background: #fff3cd;
-            padding: 25px;
-            border-radius: 15px;
-            border-left: 5px solid #ffc107;
-            margin-top: 20px;
-        }
-
-        .sample-title {
-            font-size: 1.3rem;
-            color: #856404;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sample-data {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .sample-item {
-            background: rgba(255, 255, 255, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .sample-variable {
-            font-weight: bold;
-            color: #e74c3c;
-            font-size: 1.1rem;
-        }
-
-        .sample-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #2c3e50;
-            margin: 5px 0;
-        }
-
-        .load-sample-btn {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
-        }
-
-        .load-sample-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
-        }
-
-        .instructions {
-            grid-column: 1 / -1;
-            background: #e8f4f8;
-            padding: 25px;
-            border-radius: 15px;
-            border-left: 5px solid #17a2b8;
-            margin-top: 20px;
-        }
-
-        .instructions h3 {
-            color: #0c5460;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-        }
-
-        .instructions ul {
-            list-style-position: inside;
-            color: #0c5460;
-        }
-
-        .instructions li {
-            margin-bottom: 8px;
-            padding-left: 10px;
-        }
-
-        .error {
-            color: #e74c3c;
-            font-weight: bold;
-            background: #fdf2f2;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            border-left: 4px solid #e74c3c;
-        }
-
-        .icon {
-            font-size: 1.3rem;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                padding: 20px;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .formula {
-                font-size: 1.1rem;
-            }
-
-            .result-value {
-                font-size: 2rem;
-            }
-
-            .sample-data {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Smooth animations */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .container {
-            animation: slideIn 0.8s ease;
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3); }
-            50% { box-shadow: 0 15px 30px rgba(46, 204, 113, 0.5); }
-            100% { box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3); }
-        }
-    </style>
+    footer{padding:16px;text-align:center;color:#444;background:rgba(0,0,0,0.03)}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔧 Busbar Bend Allowance Calculator</h1>
-            <p>Professional sheet metal bending calculations</p>
-            <div class="formula">
-                BA = (π/180) × θ × (R + K × t)
-            </div>
+  <div class="container">
+    <header>
+      <h1>🔧 Busbar Bend Allowance & Bend Deduction Calculator</h1>
+      <p>Compute BA, BD, neutral-axis radius and blank lengths. Choose datum to auto-select blank-length method.</p>
+      <div class="formula">BA = (π / 180) × θ × (R + K × t)  |  BD = 2·(R + t)·tan(θ/2) − BA</div>
+    </header>
+
+    <main>
+      <!-- Left: Inputs and description -->
+      <section class="card">
+        <div class="section-title">📝 Inputs & Datum Selection</div>
+
+        <div class="input-row">
+          <div>
+            <div class="input-label">t — Thickness</div>
+            <input id="t" type="number" step="0.01" min="0" placeholder="e.g. 10.00">
+            <div class="unit">mm</div>
+          </div>
+          <div>
+            <div class="input-label">R — Inside bend radius</div>
+            <input id="R" type="number" step="0.01" min="0" placeholder="e.g. 10.00">
+            <div class="unit">mm</div>
+          </div>
         </div>
 
-        <div class="main-content">
-            <div class="input-section">
-                <h2 class="section-title">
-                    <span class="icon">📝</span>
-                    Input Variables
-                </h2>
-
-                <div class="input-group">
-                    <label class="input-label">
-                        <span class="variable">t</span> Thickness
-                    </label>
-                    <input type="number" id="thickness" class="input-field" placeholder="Enter thickness" step="0.01" min="0">
-                    <div class="unit">Millimeters (mm)</div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">
-                        <span class="variable">R</span> Inside Radius
-                    </label>
-                    <input type="number" id="radius" class="input-field" placeholder="Enter inside radius" step="0.01" min="0">
-                    <div class="unit">Millimeters (mm)</div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">
-                        <span class="variable">K</span> K-Factor
-                    </label>
-                    <input type="number" id="kfactor" class="input-field" placeholder="Enter K-factor" step="0.001" min="0.1" max="0.5">
-                    <div class="unit">Typically 0.3 - 0.5 (dimensionless)</div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">
-                        <span class="variable">θ</span> Bend Angle
-                    </label>
-                    <input type="number" id="angle" class="input-field" placeholder="Enter bend angle" step="0.1" min="0" max="180">
-                    <div class="unit">Degrees (°)</div>
-                </div>
-            </div>
-
-            <div class="output-section">
-                <h2 class="section-title">
-                    <span class="icon">📊</span>
-                    Calculation Result
-                </h2>
-
-                <div class="result-display" id="resultDisplay">
-                    <div class="result-label">Bend Allowance (BA)</div>
-                    <div class="result-value" id="resultValue">0.000</div>
-                    <div class="result-unit">millimeters</div>
-                </div>
-
-                <div id="errorMessage" class="error" style="display: none;"></div>
-
-                <div style="margin-top: 25px; padding-top: 25px; border-top: 1px solid #ddd;">
-                    <h3 style="color: #27ae60; margin-bottom: 15px;">💡 What is Bend Allowance?</h3>
-                    <p style="color: #555; line-height: 1.6;">
-                        Bend allowance is the arc length of the neutral axis between the tangent points of a bend in sheet metal. 
-                        It represents the amount of material consumed in the bending process and is crucial for calculating the correct flat pattern length.
-                    </p>
-                </div>
-            </div>
-
-            <div class="sample-section">
-                <h3 class="sample-title">
-                    <span class="icon">🎯</span>
-                    Sample Calculation
-                </h3>
-                <div class="sample-data">
-                    <div class="sample-item">
-                        <div class="sample-variable">t</div>
-                        <div class="sample-value">10.0 mm</div>
-                        <div>Thickness</div>
-                    </div>
-                    <div class="sample-item">
-                        <div class="sample-variable">R</div>
-                        <div class="sample-value">15.0 mm</div>
-                        <div>Inside Radius</div>
-                    </div>
-                    <div class="sample-item">
-                        <div class="sample-variable">K</div>
-                        <div class="sample-value">0.380</div>
-                        <div>K-Factor (Copper)</div>
-                    </div>
-                    <div class="sample-item">
-                        <div class="sample-variable">θ</div>
-                        <div class="sample-value">90.0°</div>
-                        <div>Right Angle</div>
-                    </div>
-                </div>
-                <button class="load-sample-btn" onclick="loadSampleData()">
-                    Load Sample Data
-                </button>
-                <div style="text-align: center; margin-top: 15px; color: #856404;">
-                    <strong>Expected Result: BA ≈ 29.845 mm</strong>
-                </div>
-            </div>
-
-            <div class="instructions">
-                <h3>📋 Instructions</h3>
-                <ul>
-                    <li>Enter all dimensions in millimeters</li>
-                    <li>K-factor typically ranges from 0.3 to 0.5 depending on material</li>
-                    <li>Common K-factors: Copper (0.38), Aluminum (0.35), Steel (0.44)</li>
-                    <li>Results update automatically as you type</li>
-                    <li>For multiple bends, calculate each bend allowance separately and sum them</li>
-                    <li>Always verify calculations with test bends when possible</li>
-                </ul>
-            </div>
+        <div class="input-row">
+          <div>
+            <div class="input-label">K — K-factor</div>
+            <input id="K" type="number" step="0.001" min="0.01" max="1" placeholder="e.g. 0.33">
+            <div class="unit">dimensionless (typical 0.30–0.45)</div>
+          </div>
+          <div>
+            <div class="input-label">θ — Bend angle</div>
+            <input id="theta" type="number" step="0.1" min="0" max="179.9" placeholder="e.g. 90">
+            <div class="unit">degrees (°)</div>
+          </div>
         </div>
+
+        <hr style="margin:14px 0;border:none;border-top:1px solid #eee">
+
+        <div class="section-title" style="font-size:1rem">📐 Finished leg dimensions</div>
+
+        <div style="display:grid;gap:10px">
+          <div>
+            <div class="input-label">L₁ — Finished leg 1 (tangent → end)</div>
+            <input id="L1" type="number" step="0.1" min="0" placeholder="Enter L1 in mm (optional)">
+          </div>
+          <div>
+            <div class="input-label">L₂ — Finished leg 2 (tangent → end)</div>
+            <input id="L2" type="number" step="0.1" min="0" placeholder="Enter L2 in mm (optional)">
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="input-label">Select L₁/L₂ datum (how the drawing reports the flange dimensions)</label>
+          <select id="datumSelect" style="padding:10px;border-radius:8px;border:2px solid #e6e6e6">
+            <option value="tangent">Tangent-to-end (use BA)</option>
+            <option value="bd">BD datum (use BD)</option>
+            <option value="manual">Manual choice (show both)</option>
+          </select>
+          <div class="muted" style="margin-top:6px">Choose the datum that matches your drawing or measurement method. See help for details.</div>
+        </div>
+
+        <div class="controls">
+          <button class="btn" onclick="loadSample()">Load sample data</button>
+          <button class="help-link" onclick="openHelp()">Formulas & Guidance</button>
+          <button class="help-link" onclick="doCalculate()">Calculate</button>
+        </div>
+
+        <div id="error" class="error" role="alert"></div>
+
+        <div class="sample-box" style="margin-top:12px">
+          <strong>Sample:</strong> t=10 mm, R=15 mm, K=0.38, θ=90°, L₁=150, L₂=150 → Try Load sample.
+        </div>
+
+        <div class="instructions">
+          <strong>Quick tips:</strong>
+          <ul style="margin-top:8px">
+            <li>BA uses neutral-axis radius r = R + K·t; BA must be computed before BD.</li>
+            <li>BD is derived from outer projection term 2(R + t)·tan(θ/2) minus BA.</li>
+            <li>Use test coupons to validate K and springback settings with your tooling.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Right: Results -->
+      <aside class="card alt">
+        <div class="section-title">📊 Results</div>
+        <div class="result-grid">
+          <div class="result dark">
+            <div class="label">Neutral axis r = R + K·t</div>
+            <div id="rVal" class="val">0.000</div>
+            <div class="small">mm</div>
+          </div>
+
+          <div class="result">
+            <div class="label">Bend Allowance (BA)</div>
+            <div id="baVal" class="val">0.000</div>
+            <div class="small">mm</div>
+          </div>
+
+          <div class="result dark">
+            <div class="label">Bend Deduction (BD)</div>
+            <div id="bdVal" class="val">0.000</div>
+            <div class="small">mm</div>
+          </div>
+
+          <div class="result">
+            <div class="label">Blank (BA method)</div>
+            <div id="blankBA" class="val">—</div>
+            <div class="small">mm (L₁ + BA + L₂)</div>
+          </div>
+
+          <div class="result" style="background:linear-gradient(135deg,#16a085,#1abc9c)">
+            <div class="label">Blank (BD method)</div>
+            <div id="blankBD" class="val">—</div>
+            <div class="small">mm (L₁ + L₂ − BD)</div>
+          </div>
+
+          <div class="result dark">
+            <div class="label">Selected Blank</div>
+            <div id="selectedBlank" class="val">—</div>
+            <div class="small">Based on selected datum</div>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Note:</strong> If L₁/L₂ are empty the blank outputs show "—". Choose correct datum before manufacturing.
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="help-link" onclick="copyResults()">Copy results</button>
+          <button class="help-link" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <small>Designed for shop use. Validate results with a test coupon. © Busbar Tools</small>
+    </footer>
+  </div>
+
+  <!-- Modal: Formulas & Guidance -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-hidden="true">
+    <div class="modal" role="document" aria-labelledby="modalTitle">
+      <button class="close-btn" onclick="closeHelp()">Close</button>
+      <h3 id="modalTitle">Formulas, Derivations & Practical Guidance</h3>
+      <p><strong>Core formulas</strong></p>
+      <ul>
+        <li><strong>Neutral-axis radius:</strong> r = R + K·t</li>
+        <li><strong>Bend Allowance (BA):</strong> BA = (π/180)·θ·(R + K·t) — arc length at neutral axis</li>
+        <li><strong>Bend Deduction (BD):</strong> BD = 2·(R + t)·tan(θ/2) − BA</li>
+        <li><strong>Blank using BA:</strong> blank = L₁ + BA + L₂ (when L₁/L₂ measured tangent→end)</li>
+        <li><strong>Blank using BD:</strong> blank = (L₁ + L₂) − BD (when drawing L₁/L₂ are BD datum)</li>
+      </ul>
+
+      <h4>Why BA then BD?</h4>
+      <p>BA is the neutral-axis arc length and must be computed first. BD uses BA in its expression because BD is the difference between a straight-line outer-projection term (2·(R+t)·tan(θ/2)) and the neutral-axis arc. They measure the same physical bend but reference different datums.</p>
+
+      <h4>Choosing the correct datum</h4>
+      <p>
+        <strong>BA datum (tangent-to-end)</strong><br>
+        Use this when you physically measure or specify the finished straight legs from the tangent point (where the straight portion becomes curved). This is the most common fabrication method.
+      </p>
+      <p>
+        <strong>BD datum</strong><br>
+        Use BD when the drawing provides flange sums measured in the BD manner (often outside corner or projected flange-to-flange dimensions). Confirm with the drawing notes or the drafter to avoid mixing datums.
+      </p>
+
+      <h4>Practical notes</h4>
+      <ul>
+        <li>Validate K-factor and spring-back with a test coupon using your die and punch — adjust angle compensation if necessary.</li>
+        <li>For thick bars with tight die radii (R≈t), consider annealing or using larger radius dies to reduce cracking risk.</li>
+        <li>Always mark bends and centers on the blank using BA/2 offsets: center = L₁ + BA/2 (from that end).</li>
+      </ul>
+
+      <h4>Worked mini example</h4>
+      <p>Given R=10 mm, t=10 mm, K=0.33, θ=90°, L₁=150 mm, L₂=150 mm:</p>
+      <ol>
+        <li>r = 10 + 0.33·10 = 13.3 mm</li>
+        <li>BA = (π/180)·90·13.3 ≈ 20.9 mm</li>
+        <li>outer projection = 2·(R + t)·tan(θ/2) = 2·20·1 = 40 mm</li>
+        <li>BD = 40 − 20.9 = 19.1 mm</li>
+        <li>blank (BA method) = 150 + 20.9 + 150 = 320.9 mm</li>
+        <li>if drawing reports flange sum 340 in BD datum → blank = 340 − 19.1 = 320.9 mm (same)</li>
+      </ol>
+
+      <p>Close this box and test values in the main calculator. Always make a trial bend!</p>
     </div>
+  </div>
 
-    <script>
-        // Get input elements
-        const thicknessInput = document.getElementById('thickness');
-        const radiusInput = document.getElementById('radius');
-        const kFactorInput = document.getElementById('kfactor');
-        const angleInput = document.getElementById('angle');
-        const resultValue = document.getElementById('resultValue');
-        const resultDisplay = document.getElementById('resultDisplay');
-        const errorMessage = document.getElementById('errorMessage');
+  <script>
+    // DOM refs
+    const tInput = document.getElementById('t');
+    const RInput = document.getElementById('R');
+    const KInput = document.getElementById('K');
+    const thetaInput = document.getElementById('theta');
+    const L1Input = document.getElementById('L1');
+    const L2Input = document.getElementById('L2');
+    const datumSelect = document.getElementById('datumSelect');
 
-        // Calculate bend allowance function
-        function calculateBendAllowance() {
-            // Get input values
-            const t = parseFloat(thicknessInput.value) || 0;
-            const R = parseFloat(radiusInput.value) || 0;
-            const K = parseFloat(kFactorInput.value) || 0;
-            const theta = parseFloat(angleInput.value) || 0;
+    const rVal = document.getElementById('rVal');
+    const baVal = document.getElementById('baVal');
+    const bdVal = document.getElementById('bdVal');
+    const blankBA = document.getElementById('blankBA');
+    const blankBD = document.getElementById('blankBD');
+    const selectedBlank = document.getElementById('selectedBlank');
+    const errorBox = document.getElementById('error');
 
-            // Clear previous errors
-            errorMessage.style.display = 'none';
-            resultDisplay.classList.remove('pulse');
+    // modal
+    const modal = document.getElementById('modalBackdrop');
 
-            // Validation
-            if (t <= 0 || R <= 0 || K <= 0 || theta <= 0) {
-                resultValue.textContent = '0.000';
-                if (t > 0 || R > 0 || K > 0 || theta > 0) {
-                    showError('Please enter positive values for all parameters');
-                }
-                return;
-            }
+    function openHelp(){ modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); }
+    function closeHelp(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
 
-            if (K < 0.1 || K > 0.5) {
-                showError('K-factor should typically be between 0.1 and 0.5');
-            }
+    function showError(msg){
+      errorBox.style.display='block'; errorBox.textContent = msg;
+    }
+    function clearError(){ errorBox.style.display='none'; errorBox.textContent = ''; }
 
-            if (theta > 180) {
-                showError('Bend angle should not exceed 180 degrees');
-                return;
-            }
+    function isPositiveNumber(v){ return typeof v === 'number' && isFinite(v) && v >= 0; }
 
-            // Calculate bend allowance: BA = (π/180) × θ × (R + K × t)
-            const bendAllowance = (Math.PI / 180) * theta * (R + K * t);
+    function doCalculate(){
+      clearError();
 
-            // Display result
-            resultValue.textContent = bendAllowance.toFixed(3);
-            
-            // Add pulse animation for new calculation
-            resultDisplay.classList.add('pulse');
-            setTimeout(() => {
-                resultDisplay.classList.remove('pulse');
-            }, 2000);
+      const t = parseFloat(tInput.value);
+      const R = parseFloat(RInput.value);
+      const K = parseFloat(KInput.value);
+      const theta = parseFloat(thetaInput.value);
+
+      let L1 = L1Input.value === '' ? null : parseFloat(L1Input.value);
+      let L2 = L2Input.value === '' ? null : parseFloat(L2Input.value);
+
+      // basic validation
+      if (!isPositiveNumber(t) || !isPositiveNumber(R) || !isPositiveNumber(K) || isNaN(theta)){
+        // clear outputs if incomplete
+        rVal.textContent = '0.000';
+        baVal.textContent = '0.000';
+        bdVal.textContent = '0.000';
+        blankBA.textContent = '—';
+        blankBD.textContent = '—';
+        selectedBlank.textContent = '—';
+        // no error, just wait for inputs
+        return;
+      }
+
+      if (K < 0.01 || K > 1.0) showError('K-factor outside typical bounds — confirm material/temper.');
+      if (theta <= 0) { showError('Angle must be greater than 0°'); return; }
+      if (theta >= 180) { showError('Angle must be less than 180°'); return; }
+
+      // 1. neutral axis radius
+      const rNA = R + K * t;
+      rVal.textContent = rNA.toFixed(3);
+
+      // 2. BA
+      const BA = (Math.PI / 180) * theta * rNA;
+      baVal.textContent = BA.toFixed(3);
+
+      // 3. BD (use BA)
+      const thetaHalfRad = theta * Math.PI / 360.0; // theta/2 in radians
+      const outerProj = 2 * (R + t) * Math.tan(thetaHalfRad);
+      const BD = outerProj - BA;
+      bdVal.textContent = BD.toFixed(3);
+
+      // 4. blank lengths if L1/L2 provided
+      let blankByBA = null;
+      let blankByBD = null;
+      if (L1 !== null && L2 !== null && !isNaN(L1) && !isNaN(L2)) {
+        blankByBA = L1 + BA + L2;
+        blankByBD = L1 + L2 - BD;
+        blankBA.textContent = blankByBA.toFixed(3);
+        blankBD.textContent = blankByBD.toFixed(3);
+      } else {
+        blankBA.textContent = '—';
+        blankBD.textContent = '—';
+      }
+
+      // 5. Selected blank based on datumSelect
+      const datum = datumSelect.value;
+      if (datum === 'tangent') {
+        selectedBlank.textContent = (blankByBA !== null) ? blankByBA.toFixed(3) + ' mm (BA datum)' : '—';
+      } else if (datum === 'bd') {
+        selectedBlank.textContent = (blankByBD !== null) ? blankByBD.toFixed(3) + ' mm (BD datum)' : '—';
+      } else {
+        // manual: show both if present, or whichever available
+        if (blankByBA !== null && blankByBD !== null) {
+          selectedBlank.textContent = blankByBA.toFixed(3) + ' mm (BA) / ' + blankByBD.toFixed(3) + ' mm (BD)';
+        } else if (blankByBA !== null) {
+          selectedBlank.textContent = blankByBA.toFixed(3) + ' mm (BA)';
+        } else if (blankByBD !== null) {
+          selectedBlank.textContent = blankByBD.toFixed(3) + ' mm (BD)';
+        } else {
+          selectedBlank.textContent = '—';
         }
+      }
 
-        // Show error message
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-        }
+      // minor UI pulse
+      [rVal, baVal, bdVal, blankBA, blankBD, selectedBlank].forEach(el=>{
+        el.style.transform='translateY(-6px)';
+        el.style.transition='transform 180ms ease';
+      });
+      setTimeout(()=>{ [rVal, baVal, bdVal, blankBA, blankBD, selectedBlank].forEach(el=>el.style.transform='none'); },260);
+    }
 
-        // Load sample data function
-        function loadSampleData() {
-            thicknessInput.value = '10.0';
-            radiusInput.value = '15.0';
-            kFactorInput.value = '0.380';
-            angleInput.value = '90.0';
-            
-            // Trigger calculation
-            calculateBendAllowance();
-            
-            // Visual feedback
-            resultDisplay.style.transform = 'scale(1.05)';
-            setTimeout(() => {
-                resultDisplay.style.transform = 'scale(1)';
-            }, 200);
-        }
+    // load sample
+    function loadSample(){
+      tInput.value = '10.00';
+      RInput.value = '15.00';
+      KInput.value = '0.380';
+      thetaInput.value = '90';
+      L1Input.value = '150';
+      L2Input.value = '150';
+      datumSelect.value = 'tangent';
+      clearError();
+      doCalculate();
+    }
 
-        // Add event listeners for real-time calculation
-        thicknessInput.addEventListener('input', calculateBendAllowance);
-        radiusInput.addEventListener('input', calculateBendAllowance);
-        kFactorInput.addEventListener('input', calculateBendAllowance);
-        angleInput.addEventListener('input', calculateBendAllowance);
+    // copy results to clipboard
+    function copyResults(){
+      const lines = [
+        `r (mm): ${rVal.textContent}`,
+        `BA (mm): ${baVal.textContent}`,
+        `BD (mm): ${bdVal.textContent}`,
+        `Blank (BA): ${blankBA.textContent}`,
+        `Blank (BD): ${blankBD.textContent}`,
+        `Selected blank: ${selectedBlank.textContent}`
+      ];
+      navigator.clipboard.writeText(lines.join('\n')).then(()=>{ alert('Results copied to clipboard'); }, ()=>{ alert('Copy failed — select and copy manually') });
+    }
 
-        // Initialize with sample data
-        window.addEventListener('load', () => {
-            loadSampleData();
-        });
+    // export CSV of single-line results
+    function exportCSV(){
+      const headers = ['t(mm)','R(mm)','K','theta(deg)','r(mm)','BA(mm)','BD(mm)','L1(mm)','L2(mm)','Blank_BA(mm)','Blank_BD(mm)'];
+      const vals = [
+        tInput.value || '',
+        RInput.value || '',
+        KInput.value || '',
+        thetaInput.value || '',
+        rVal.textContent || '',
+        baVal.textContent || '',
+        bdVal.textContent || '',
+        L1Input.value || '',
+        L2Input.value || '',
+        blankBA.textContent || '',
+        blankBD.textContent || ''
+      ];
+      const csv = headers.join(',') + '\n' + vals.join(',');
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bend_calc_export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
-            // Ctrl/Cmd + Enter to load sample data
-            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                loadSampleData();
-                event.preventDefault();
-            }
-        });
+    // event listeners
+    [tInput, RInput, KInput, thetaInput, L1Input, L2Input, datumSelect].forEach(el=>{
+      el.addEventListener('input', ()=>{ clearError(); doCalculate(); });
+    });
 
-        // Add visual feedback for input focus
-        const inputs = document.querySelectorAll('.input-field');
-        inputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentElement.style.transform = 'translateY(-2px)';
-                this.parentElement.style.transition = 'transform 0.2s ease';
-            });
-            
-            input.addEventListener('blur', function() {
-                this.parentElement.style.transform = 'translateY(0)';
-            });
-        });
-    </script>
+    // initialize
+    window.addEventListener('load', ()=>{ loadSample(); });
+
+    // keyboard shortuct: ctrl+shift+s -> sample
+    document.addEventListener('keydown', (e)=>{ if (e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='s') loadSample(); });
+  </script>
 </body>
 </html>
