@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Busbar Bend Calculator — SVG Geometry</title>
+<style>
+  :root{
+    --bg1:#f4f6f8; --card:#fff; --accent:#2b7be4; --good:#27ae60; --muted:#6c757d;
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter, "Segoe UI", Roboto, Arial; margin:0; background:linear-gradient(180deg,#eef3fb,#f7fafc); color:#122;}
+  .wrap{max-width:1100px;margin:26px auto;padding:18px;}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+  h1{font-size:1.25rem;margin:0}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+  label{font-size:0.85rem;color:#234;display:block;margin-bottom:6px;font-weight:600}
+  input[type=number], select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #dbe6f5;background:#fff;font-size:0.95rem}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  .small{font-size:0.85rem;color:var(--muted);margin-top:6px}
+  .results{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .result{background:linear-gradient(180deg,#fff,#f6fbff);padding:10px;border-radius:8px;border:1px solid #eef4ff;text-align:center}
+  .label{font-size:0.82rem;color:#456;margin-bottom:6px}
+  .value{font-weight:800;font-size:1.15rem;color:#112}
+  .svg-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px}
+  svg{max-width:100%;height:auto;border-radius:6px;background:#fff;border:1px solid #eef3ff}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{padding:8px 12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:700}
+  a.download{display:inline-block;margin-left:8px;color:var(--accent);font-weight:700}
+  footer{margin-top:14px;font-size:0.82rem;color:var(--muted)}
+  .muted{color:var(--muted);font-size:0.9rem}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Busbar Bend Calculator — BA & BD (SVG)</h1>
+      <div class="small muted">BA computed first; BD uses BA. Units: mm / degrees</div>
+    </header>
+
+    <div class="grid">
+      <section class="card" aria-labelledby="inputs">
+        <div id="inputs">
+          <label>Thickness, t (mm)</label>
+          <input id="t" type="number" step="0.01" min="0" value="10.00">
+
+          <label style="margin-top:8px">Inside radius, R (mm)</label>
+          <input id="R" type="number" step="0.01" min="0" value="10.00">
+
+          <div class="row" style="margin-top:8px">
+            <div>
+              <label>K-factor</label>
+              <input id="K" type="number" step="0.001" min="0.01" max="1" value="0.33">
+            </div>
+            <div>
+              <label>Angle θ (°)</label>
+              <input id="theta" type="number" step="0.1" min="0.1" max="179.9" value="90">
+            </div>
+          </div>
+
+          <label style="margin-top:8px">Finished leg L₁ (tangent→end) (mm)</label>
+          <input id="L1" type="number" step="0.1" min="0" placeholder="Optional">
+
+          <label style="margin-top:8px">Finished leg L₂ (tangent→end) (mm)</label>
+          <input id="L2" type="number" step="0.1" min="0" placeholder="Optional">
+
+          <label style="margin-top:8px">Datum for L₁/L₂</label>
+          <select id="datum">
+            <option value="tangent">Tangent-to-end (use BA)</option>
+            <option value="bd">BD datum (use BD)</option>
+            <option value="both">Show both</option>
+          </select>
+
+          <div class="controls">
+            <button id="calc">Calculate</button>
+            <button id="sample">Load Sample</button>
+            <button id="copy">Copy Results</button>
+            <a id="downloadLink" class="download" href="#">Download HTML</a>
+          </div>
+
+          <div class="results" style="margin-top:14px">
+            <div class="result">
+              <div class="label">Neutral axis r</div>
+              <div class="value" id="rOut">0.000</div>
+            </div>
+            <div class="result">
+              <div class="label">Bend Allowance (BA)</div>
+              <div class="value" id="baOut">0.000</div>
+            </div>
+            <div class="result">
+              <div class="label">Bend Deduction (BD)</div>
+              <div class="value" id="bdOut">0.000</div>
+            </div>
+            <div class="result">
+              <div class="label">Blank (BA method)</div>
+              <div class="value" id="blankBaOut">—</div>
+            </div>
+            <div class="result">
+              <div class="label">Blank (BD method)</div>
+              <div class="value" id="blankBdOut">—</div>
+            </div>
+            <div class="result">
+              <div class="label">Selected Blank</div>
+              <div class="value" id="selectedOut">—</div>
+            </div>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            Notes: BA uses neutral-axis radius r = R + K·t. BD = 2(R+t)·tan(θ/2) − BA. Test coupons recommended for K/spring-back validation.
+          </div>
+        </div>
+      </section>
+
+      <aside class="card" aria-labelledby="diagram">
+        <div id="diagramTitle" style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Geometry Reference (interactive)</strong>
+          <small class="muted">Scaled view — annotation updates as you change inputs</small>
+        </div>
+
+        <div class="svg-wrap">
+          <!-- SVG diagram: shows L1 left, L2 right, inside radius R, neutral axis, BA arc -->
+          <svg id="svg" viewBox="0 0 900 300" role="img" aria-label="Busbar bend geometry">
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="#234"/>
+              </marker>
+            </defs>
+
+            <!-- baseline -->
+            <line x1="50" y1="220" x2="850" y2="220" stroke="#eee" stroke-width="1"/>
+
+            <!-- left straight (L1) -->
+            <line id="leg1" x1="120" y1="220" x2="300" y2="220" stroke="#2b7be4" stroke-width="14" stroke-linecap="butt"/>
+
+            <!-- arc outer (R+t) -->
+            <path id="outerArc" d="" stroke="#b34" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+            <!-- neutral axis arc -->
+            <path id="neutralArc" d="" stroke="#27ae60" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+            <!-- inner arc (R) just for reference -->
+            <path id="innerArc" d="" stroke="#555" stroke-width="2" fill="none" stroke-dasharray="4 4"/>
+
+            <!-- right straight (L2) -->
+            <line id="leg2" x1="540" y1="220" x2="740" y2="220" stroke="#2b7be4" stroke-width="14" stroke-linecap="butt"/>
+
+            <!-- Bend center marker -->
+            <circle id="centerPt" cx="420" cy="220" r="3" fill="#222"></circle>
+
+            <!-- annotations -->
+            <text id="txtR" x="420" y="100" font-size="13" fill="#234">R=10</text>
+            <text id="txtT" x="420" y="118" font-size="13" fill="#234">t=10</text>
+            <text id="txtK" x="420" y="136" font-size="13" fill="#234">K=0.33</text>
+            <text id="txtTheta" x="420" y="154" font-size="13" fill="#234">θ=90°</text>
+
+            <!-- BA label arrow -->
+            <line id="baArrow1" x1="360" y1="170" x2="420" y2="150" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arrow)"/>
+            <line id="baArrow2" x1="480" y1="150" x2="540" y2="170" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arrow)"/>
+            <text id="baLabel" x="420" y="145" font-size="12" fill="#27ae60" text-anchor="middle">BA ≈ 20.9 mm</text>
+
+            <!-- BD label -->
+            <text id="bdLabel" x="420" y="250" font-size="12" fill="#b34" text-anchor="middle">BD ≈ 19.1 mm</text>
+
+            <!-- L1/L2 labels -->
+            <text id="l1Label" x="210" y="245" font-size="12" fill="#234" text-anchor="middle">L₁</text>
+            <text id="l2Label" x="640" y="245" font-size="12" fill="#234" text-anchor="middle">L₂</text>
+
+          </svg>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      <div class="muted">Tip: Use the Datum selector to choose which blank-length method to apply automatically. You can download this page (Save As) using the link above.</div>
+    </footer>
+  </div>
+
+<script>
+(() => {
+  // cache DOM
+  const $ = sel => document.getElementById(sel);
+  const tIn = $('t'), RIn = $('R'), KIn = $('K'), thIn = $('theta'), L1In = $('L1'), L2In = $('L2'), datum = $('datum');
+  const rOut = $('rOut'), baOut = $('baOut'), bdOut = $('bdOut'), blankBaOut = $('blankBaOut'), blankBdOut = $('blankBdOut'), selectedOut = $('selectedOut');
+  const calcBtn = $('calc'), sampleBtn = $('sample'), copyBtn = $('copy'), dlLink = $('downloadLink');
+  // svg elements
+  const svg = document.getElementById('svg'), leg1 = $('leg1'), leg2 = $('leg2'), neutralArc = $('neutralArc'), outerArc = $('outerArc'), innerArc = $('innerArc');
+  const centerPt = $('centerPt'), baLabel = $('baLabel'), bdLabel = $('bdLabel'), txtR = $('txtR'), txtT = $('txtT'), txtK = $('txtK'), txtTheta = $('txtTheta');
+  const l1Label = $('l1Label'), l2Label = $('l2Label');
+
+  // helper math
+  const toRad = d => d * Math.PI / 180;
+  function format(v){ return (isFinite(v) ? v.toFixed(3) : '—'); }
+
+  function calculateAndRender(){
+    // parse inputs
+    const t = parseFloat(tIn.value) || 0;
+    const R = parseFloat(RIn.value) || 0;
+    const K = parseFloat(KIn.value) || 0.33;
+    const theta = parseFloat(thIn.value) || 0;
+    const L1 = L1In.value === '' ? null : parseFloat(L1In.value);
+    const L2 = L2In.value === '' ? null : parseFloat(L2In.value);
+
+    if (theta <= 0 || theta >= 180 || t < 0 || R < 0){ 
+      // clear outputs
+      rOut.textContent = format(NaN); baOut.textContent = format(NaN); bdOut.textContent = format(NaN);
+      blankBaOut.textContent = '—'; blankBdOut.textContent = '—'; selectedOut.textContent = '—';
+      return;
+    }
+
+    // calculations
+    const rNA = R + K * t;
+    const BA = (Math.PI / 180) * theta * rNA; // neutral axis arc
+    const thetaHalf = toRad(theta / 2);
+    const outerProj = 2 * (R + t) * Math.tan(thetaHalf);
+    const BD = outerProj - BA;
+
+    // blanks
+    let blankBA = null, blankBD = null;
+    if (L1 !== null && L2 !== null){
+      blankBA = L1 + BA + L2;
+      blankBD = L1 + L2 - BD;
+    }
+
+    // update numeric outputs
+    rOut.textContent = format(rNA);
+    baOut.textContent = format(BA);
+    bdOut.textContent = format(BD);
+    blankBaOut.textContent = blankBA !== null ? format(blankBA) : '—';
+    blankBdOut.textContent = blankBD !== null ? format(blankBD) : '—';
+
+    // selected output based on datum
+    if (datum.value === 'tangent'){
+      selectedOut.textContent = blankBA !== null ? format(blankBA) + ' mm (BA)' : '—';
+    } else if (datum.value === 'bd'){
+      selectedOut.textContent = blankBD !== null ? format(blankBD) + ' mm (BD)' : '—';
+    } else {
+      if (blankBA !== null && blankBD !== null) selectedOut.textContent = format(blankBA) + ' mm (BA) / ' + format(blankBD) + ' mm (BD)';
+      else selectedOut.textContent = '—';
+    }
+
+    // update svg annotations & geometry (scaled visualization)
+    const cx = 420, cy = 220;
+    const scale = 2.0;
+    const rNeutralPx = Math.max(8, rNA * scale);
+    const rOuterPx = Math.max(10, (R + t) * scale);
+    const rInnerPx = Math.max(6, R * scale);
+
+    const startAngle = Math.PI/2 + toRad((180 - theta)/2);
+    const endAngle = Math.PI/2 - toRad((180 - theta)/2);
+
+    const naStartX = cx + rNeutralPx * Math.cos(startAngle);
+    const naStartY = cy - rNeutralPx * Math.sin(startAngle);
+    const naEndX = cx + rNeutralPx * Math.cos(endAngle);
+    const naEndY = cy - rNeutralPx * Math.sin(endAngle);
+    const largeArcFlag = (theta > 180) ? 1 : 0;
+    const neutralPath = `M ${naStartX} ${naStartY} A ${rNeutralPx} ${rNeutralPx} 0 ${largeArcFlag} 0 ${naEndX} ${naEndY}`;
+    neutralArc.setAttribute('d', neutralPath);
+
+    const oStartX = cx + rOuterPx * Math.cos(startAngle);
+    const oStartY = cy - rOuterPx * Math.sin(startAngle);
+    const oEndX = cx + rOuterPx * Math.cos(endAngle);
+    const oEndY = cy - rOuterPx * Math.sin(endAngle);
+    outerArc.setAttribute('d', `M ${oStartX} ${oStartY} A ${rOuterPx} ${rOuterPx} 0 ${largeArcFlag} 0 ${oEndX} ${oEndY}`);
+
+    const iStartX = cx + rInnerPx * Math.cos(startAngle);
+    const iStartY = cy - rInnerPx * Math.sin(startAngle);
+    const iEndX = cx + rInnerPx * Math.cos(endAngle);
+    const iEndY = cy - rInnerPx * Math.sin(endAngle);
+    innerArc.setAttribute('d', `M ${iStartX} ${iStartY} A ${rInnerPx} ${rInnerPx} 0 ${largeArcFlag} 0 ${iEndX} ${iEndY}`);
+
+    const tanLeftX = naStartX - (L1 !== null ? Math.min(L1 * scale, 180) : 120);
+    const tanRightX = naEndX + (L2 !== null ? Math.min(L2 * scale, 180) : 180);
+
+    leg1.setAttribute('x1', Math.max(60, tanLeftX - (L1 !== null ? Math.min(L1 * scale, 180) : 60)));
+    leg1.setAttribute('x2', naStartX - 4);
+    leg1.setAttribute('y1', cy);
+    leg1.setAttribute('y2', cy);
+
+    leg2.setAttribute('x1', naEndX + 4);
+    leg2.setAttribute('x2', Math.min(820, tanRightX + (L2 !== null ? Math.min(L2 * scale, 180) : 60)));
+    leg2.setAttribute('y1', cy);
+    leg2.setAttribute('y2', cy);
+
+    centerPt.setAttribute('cx', cx);
+    centerPt.setAttribute('cy', cy);
+
+    txtR.textContent = `R = ${R}`;
+    txtT.textContent = `t = ${t}`;
+    txtK.textContent = `K = ${K}`;
+    txtTheta.textContent = `θ = ${theta}°`;
+    baLabel.textContent = `BA ≈ ${format(BA)} mm`;
+    bdLabel.textContent = `BD ≈ ${format(BD)} mm`;
+    l1Label.setAttribute('x', (parseFloat(leg1.getAttribute('x1')) + parseFloat(leg1.getAttribute('x2')))/2 );
+    l2Label.setAttribute('x', (parseFloat(leg2.getAttribute('x1')) + parseFloat(leg2.getAttribute('x2')))/2 );
+  } // calculateAndRender
+
+  let timer = null;
+  function scheduleCalc(){ clearTimeout(timer); timer = setTimeout(calculateAndRender, 120); }
+
+  [tIn, RIn, KIn, thIn, L1In, L2In, datum].forEach(el => el.addEventListener('input', scheduleCalc));
+  calcBtn.addEventListener('click', calculateAndRender);
+  sampleBtn.addEventListener('click', ()=>{
+    tIn.value='10.00'; RIn.value='15.00'; KIn.value='0.38'; thIn.value='90'; L1In.value='150'; L2In.value='150'; datum.value='tangent';
+    calculateAndRender();
+  });
+  copyBtn.addEventListener('click', ()=>{
+    const lines = [
+      `r = ${rOut.textContent} mm`,
+      `BA = ${baOut.textContent} mm`,
+      `BD = ${bdOut.textContent} mm`,
+      `Blank (BA) = ${blankBaOut.textContent} mm`,
+      `Blank (BD) = ${blankBdOut.textContent} mm`,
+      `Selected = ${selectedOut.textContent}`
+    ];
+    navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Results copied to clipboard'), ()=>alert('Copy failed'));
+  });
+
+  dlLink.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    dlLink.href = url;
+    dlLink.download = 'busbar_calculator_with_svg.html';
+    setTimeout(()=>dlLink.click(), 50);
+  });
+
+  calculateAndRender();
+})();</script>
+</body>
+</html>
